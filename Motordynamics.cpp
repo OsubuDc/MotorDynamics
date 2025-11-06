@@ -102,7 +102,16 @@ int main() {
         cout << "timeconstant2: " << timeconstant2 << " s" << endl;
         cout << "Settling time (4*tau): " << 4*std::max(timeconstant1, timeconstant2) << " s" << endl;
         } else {
-            
+            cout << "imaginary parts, system is underdamped" << endl;
+            double sigma = lambda1.real();
+            double omega_d = std::abs(lambda1.imag());
+            double damping_ratio = -sigma / omega_d;
+            double omega_n = std::sqrt(sigma*sigma + omega_d*omega_d);
+
+            cout << "Damping ratio ζ: " << damping_ratio << endl;
+            cout << "Natural frequency ωn: " << omega_n << " rad/s" << endl;
+            cout << "Damped frequency ωd: " << omega_d << " rad/s" << endl;
+            cout << "Oscillation frequency fd: " << omega_d / (2.0*M_PI) << " Hz" << endl;         
         }
 
     return 0;
