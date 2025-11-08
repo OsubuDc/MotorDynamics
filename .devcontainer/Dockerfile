@@ -22,4 +22,5 @@ RUN apt-get update && export DEBIAN_FRONTEND=noninteractive \
     && apt-get -y install --no-install-recommends \
        build-essential \
        libeigen3-dev \
+       libyaml-cpp-dev \
     && rm -rf /var/lib/apt/lists/*

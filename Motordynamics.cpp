@@ -2,117 +2,89 @@
 #include <Eigen/Dense> // Eigen library for matrix operations
 #include <iomanip>    // For std::setprecision, std::fixed (formatting)
 #include <cmath>      // For mathematical functions (sqrt, exp, etc.)
+#include <vector>    // For std::vector
+#include <yaml-cpp/yaml.h>
+
+class MAXON_BLDC_MOTOR_SIMULATION {
+    private:
+        double Vnom;    // nominal voltage
+        double wT0;     // no load speed rpm
+        double IT0;     // no load current
+        double wTn;     // nominal speed
+        double Tn;      // nominal torque
+        double In;      // nominal current
+        double Ts;      // stall torque
+        double Is;      // stall current
+        double eff_max; // max efficiency
+        double R;       // terminal resistance phase2phase
+        double L;       // terminal inductance phase2phase
+        double Kt;      // torque constant
+        double Kv;      // speed constant
+        double dwdT;    // speed torque gradient
+        double tau_mech;// mechanical time constant
+        double J;       // rotor inertia
+        double wTmax;   // max permissible speed rpm
+        int p;          // pole pairs
+        double Kb;      // back-emf constant
+        double b;       // damping coefficient
+
+    public:
+        MAXON_BLDC_MOTOR_SIMULATION(const YAML::Node &node) //reference to the yaml node motor_values
+        {
+            Vnom = node["nominal_voltage"].as<double>();
+            wT0 = node["no_load_speed_rpm"].as<double>();
+            IT0 = node["no_load_current"].as<double>();
+            wTn = node["nominal_speed"].as<double>();
+            Tn = node["nominal_torque"].as<double>();
+            In = node["nominal_current"].as<double>();
+            Ts = node["stall_torque"].as<double>();
+            Is = node["stall_current"].as<double>();
+            eff_max = node["max_efficiency"].as<double>();
+            R = node["terminal_resistance_phase2phase"].as<double>();
+            L = node["terminal_inductance_phase2phase"].as<double>();
+            Kt = node["torque_constant"].as<double>();
+            Kv = node["speed_constant"].as<double>();
+            dwdT = node["speed_torque_gradient"].as<double>();
+            tau_mech = node["mechanical_time_constant"].as<double>();
+            J = node["rotor_inertia"].as<double>();
+            wTmax = node["max_permissible_speed_rpm"].as<double>();
+            p = node["pole_pairs"].as<int>();
+
+            // Derived parameters
+            Kb = 1.0 / Kv * 60.0 / (2.0 * M_PI); // back-emf constant
+            b  = J / tau_mech;                    // damping coefficient
+        };
+        void printMotorInfo() const {
+        std::cout << "Motor nominal voltage: " << Vnom << " V\n";
+        std::cout << "No-load speed: " << wT0 << " RPM\n";
+        std::cout << "No-load current: " << IT0 << " A\n";
+        std::cout << "Nominal speed: " << wTn << " RPM\n";
+        std::cout << "Nominal torque: " << Tn << " Nm\n";
+        std::cout << "Nominal current: " << In << " A\n";
+        std::cout << "Stall torque: " << Ts << " Nm\n";
+        std::cout << "Stall current: " << Is << " A\n";
+        std::cout << "Max efficiency: " << eff_max << "\n";
+        std::cout << "Terminal resistance: " << R << " Ω\n";
+        std::cout << "Terminal inductance: " << L << " H\n";
+        std::cout << "Torque constant: " << Kt << " Nm/A\n";
+        std::cout << "Speed constant: " << Kv << " RPM/V\n";
+        std::cout << "Back-EMF constant: " << Kb << " Vs/rad\n";
+        std::cout << "Speed-torque gradient: " << dwdT << "\n";
+        std::cout << "Mechanical time constant: " << tau_mech << " s\n";
+        std::cout << "Rotor inertia: " << J << " kg·m²\n";
+        std::cout << "Damping coefficient: " << b << " Nm·s/rad\n";
+        std::cout << "Max permissible speed: " << wTmax << " RPM\n";
+        std::cout << "Pole pairs: " << p << "\n";
+    }
+};
 
 int main() {
-    //ECXFL42M KL A HTQ 48V
-    //values at nominal voltage
-    double nominal_voltage = 48.0; 
-    double no_load_speed_rpm = 7560.0;
-    double no_load_current = 0.163;
-    double nominal_speed = 6070.0;
-    double nominal_torque = 0.221;
-    double nominal_current = 3.53;
-    double stall_torque = 1.140;
-    double stall_current = 51.4;
-    double max_efficiency = 0.84098;
-    //characteristics
-    double terminal_resistance_phase2phase = 0.933;
-    double terminal_inductance_phase2phase = 0.000698;
-    double torque_constant = 0.0601; //Kt
-    double speed_constant = 159.0; //Kv -> Kb = 1/Kv *60/(2pi)
-    double back_emf_constant = 1/speed_constant * 60.0 / (2.0 * M_PI); //Kb
-    double speed_torque_gradient = 258.6;
-    double mechanical_time_constant = 0.00223;
-    double rotor_inertia = 0.00000862;
-    //thermal data
-        //not using this at the moment
-    //mechanical data
-    double max_permissible_speed_rpm = 10000.0;
-    //further_specifications
-    int pole_pairs = 8;
-    
-    //not_provided_data
-    double damping_coefficient = rotor_inertia / mechanical_time_constant;
-    
-    //references
-    double& J = rotor_inertia;
-    double& R = terminal_resistance_phase2phase;
-    double& L = terminal_inductance_phase2phase;
-    double& Kt = torque_constant;
-    double& Kb = back_emf_constant;
-    double& b = damping_coefficient;
+    YAML::Node motor_values = YAML::LoadFile("/workspaces/MotorDynamics/ECXFL42M_KL_A_HTQ_48V.yaml");
 
-    //StateSpace
-    Eigen::Matrix2d A;
-    A << -R/L, -Kb/L, Kt/J, -b/J;
+    MAXON_BLDC_MOTOR_SIMULATION motor(motor_values);
 
-    using namespace std;
-    cout << "Motor Parameters" << endl;
-    cout << "Rotor inertia J: " << J << " kgm²" << endl;
-    cout << "Resistance R: " << R << " Ohm" << endl;
-    cout << "Inductance L: " << L << " H" << endl;
-    cout << "Torque constant Kt: " << Kt << " Nm/A" << endl;
-    cout << "Back EMF constant Kb: " << Kb << " Vs/rad" << endl;
-    cout << "Damping coefficient b: " << b << " Nm/(rad/s)" << endl;
-    cout << "State-Space A Matrix: " << endl << A << endl;
-
-    double timeconstant_mechanical = J / b;
-    double timeconstant_electrical = L / R;
-
-    cout <<"timeconstant_mechanical: " << timeconstant_mechanical << " s" << endl;
-    cout <<"timeconstant_electrical: " << timeconstant_electrical << " s" << endl;
-
-    //eigenvalues
-    Eigen::EigenSolver<Eigen::Matrix2d> eigencalculationsA(A); //vaiable_name_for_the_solver(constructor argument -> matrix you are analyzing)
-    Eigen::VectorXcd eigenvaluesA = eigencalculationsA.eigenvalues(); 
-    int numberOfEigenvaluesA = eigenvaluesA.size();
-    cout << "Number of eigenvalues of A Matrix: " << numberOfEigenvaluesA << endl;
-    for (int i = 0; i < eigenvaluesA.size(); ++i) {
-        std::complex<double> lambda = eigenvaluesA(i);
-        cout << "lambda " << (i+1) << " = " << lambda.real();
-        if (lambda.imag() >= 0) {
-            cout << " + i" << lambda.imag() << endl;
-        } else {
-            cout << " - i" << -lambda.imag() << endl;
-        }
-    }
-    //Stability
-    bool isStable = true;
-    for (int i = 0; i < eigenvaluesA.size(); ++i) {
-        if (eigenvaluesA(i).real() >= 0) {
-            isStable = false;
-            break;
-        }
-    }
-    cout << "Stability check: " << endl;
-    if (isStable) {
-        cout << "The system is stable (all eigenvalues have negative real parts)." << endl;
-    } else {
-        cout << "The system is unstable (at least one eigenvalue has a non-negative real part)." << endl;
-    }
-    
-    std::complex<double> lambda1 = eigenvaluesA(0);
-    std::complex<double> lambda2 = eigenvaluesA(1);
-
-    if (std::abs(lambda1.imag()) < 1e-10 && std::abs(lambda2.imag()) < 1e-10){
-        cout << "no (very small) imaginary parts, system is overdamped" << endl;
-        double timeconstant1 = -1.0 / lambda1.real();
-        double timeconstant2 = -1.0 / lambda2.real();
-        cout << "timeconstant1: " << timeconstant1 << " s" << endl;
-        cout << "timeconstant2: " << timeconstant2 << " s" << endl;
-        cout << "Settling time (4*tau): " << 4*std::max(timeconstant1, timeconstant2) << " s" << endl;
-        } else {
-            cout << "imaginary parts, system is underdamped" << endl;
-            double sigma = lambda1.real();
-            double omega_d = std::abs(lambda1.imag());
-            double damping_ratio = -sigma / omega_d;
-            double omega_n = std::sqrt(sigma*sigma + omega_d*omega_d);
-
-            cout << "Damping ratio ζ: " << damping_ratio << endl;
-            cout << "Natural frequency ωn: " << omega_n << " rad/s" << endl;
-            cout << "Damped frequency ωd: " << omega_d << " rad/s" << endl;
-            cout << "Oscillation frequency fd: " << omega_d / (2.0*M_PI) << " Hz" << endl;         
-        }
+    motor.printMotorInfo();
 
     return 0;
 }
+

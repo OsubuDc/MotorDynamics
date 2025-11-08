@@ -1,4 +1,4 @@
-g++ -std=c++17 Motordynamics.cpp -o motor -I /usr/include/eigen3
+g++ -std=c++17 Motordynamics.cpp -o motor -I /usr/include/eigen3 -lyaml-cpp
 -std=c++17 = use c++17 standard
 -o motor = output executable
 - I = include directory path to eigen3
