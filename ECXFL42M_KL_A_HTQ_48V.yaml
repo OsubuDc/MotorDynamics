@@ -11,7 +11,7 @@ terminal_resistance_phase2phase: 0.933
 terminal_inductance_phase2phase: 0.000698
 torque_constant: 0.0601
 speed_constant: 159.0
-speed_torque_gradient: 258.6
+speed_torque_gradient: 2470.0
 mechanical_time_constant: 0.00223
 rotor_inertia: 0.00000862
 max_permissible_speed_rpm: 10000.0
