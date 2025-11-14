@@ -235,7 +235,7 @@ class MAXON_BLDC_MOTOR_SIMULATION {
         return Kv;
     }
 
-    double GetdwdT() const {
+    double getdwdT() const {
         return dwdT;
     }
 
@@ -259,9 +259,9 @@ class MAXON_BLDC_MOTOR_SIMULATION {
     }
 };
 
-void step_response(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double Torque_Min, double Torque_Max, int num_data_points) {
-    std::cout << "\n Torque sweep: " << voltage << "V\n";
-    std::cout << "Torque range: " << Torque_Min << " to " << Torque_Min << " Nm\n";
+void torque_sweep(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double Torque_Min, double Torque_Max, int num_data_points) {
+    std::cout << "\nTorque sweep: " << voltage << "V\n";
+    std::cout << "Torque range: " << Torque_Min << " to " << Torque_Max << " Nm\n";
     std::vector<SimulationDataPoint> data_sweep_vector;
     for (int i = 0; i < num_data_points; i++) {
         double load_torque = Torque_Min + (Torque_Max-Torque_Min)*i / num_data_points;
@@ -276,12 +276,13 @@ void step_response(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double To
         point.current = motor.getCurrent();
         point.speed_rad = motor.getSpeedRAD();
         point.speed_rpm = motor.getSpeedRPM();
+        point.torque = motor.getUsefulMotorTorque();
         point.voltage = voltage;
         point.load_torque = load_torque;
         data_sweep_vector.push_back(point);
 
         if (i % 10 == 0) {
-            std::cout << "Torque: " << load_torque << "Nm" << point.speed_rpm << "rpm";
+            std::cout << "Torque: " << load_torque << "Nm\n" << point.speed_rpm << "rpm\n\n";
         }
     }
     std::string filename = "torque_sweep_" + std::to_string((int)voltage) +"V.csv"; //(int) is a cast, it converst the double to an int
@@ -291,12 +292,15 @@ void step_response(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double To
         file << point.current << "," //we always reset state vector and wait for set time to get to steady state so time is useless.
             << point.speed_rad << ","
             << point.speed_rpm << ","
+            << point.torque << ","
             << point.voltage << ","
             << point.load_torque <<"\n";
     }
     file.close();
     std::cout << "sweep data vector exported to " << filename << "\n";
 }
+
+
 
 int main() {
     YAML::Node motor_values = YAML::LoadFile("/workspaces/MotorDynamics/ECXFL42M_KL_A_HTQ_48V.yaml");
@@ -306,10 +310,12 @@ int main() {
     MAXON_BLDC_MOTOR_SIMULATION motor(motor_values); //(motor_values, dt)
 
     motor.printMotorInfo();
-
-    std::cout << "Motor simulation: 48V - NO LOAD" << std::endl;
-
+    
+    double Tmax_48V = motor.getKv() * 48.0 / motor.getdwdT();
+    torque_sweep(motor, 48.0, 0.0, Tmax_48V, 50);
+    
 // motor voltage and end time simulation
+    //std::cout << "Motor simulation: 48V - NO LOAD" << std::endl;
     // motor.resetNoIC();
     // double voltage = 24.0;
     // double load_torque = 3.1;
