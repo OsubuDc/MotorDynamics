@@ -192,7 +192,7 @@ class MAXON_BLDC_MOTOR_SIMULATION {
             << point.voltage << ","
             << point.load_torque << "\n";
         }
-
+    
         file.close();
         std::cout << "Data exported to " << filename << " (" << recorded_data_vector.size() << " points)\n";
     }
@@ -259,6 +259,28 @@ class MAXON_BLDC_MOTOR_SIMULATION {
     }
 };
 
+void torque_step(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double duration, double load_torque) {
+    std::cout << "\nStep response " << voltage << "V\n";
+    motor.resetNoIC();
+    motor.StartRecording();
+    
+    int print_interval = 10000;
+    int step_count = 0;
+
+    while (motor.getCurrentTime() < duration) {
+        motor.stepRK4(voltage, load_torque);
+        if (step_count % print_interval ==0) {
+            motor.printState();
+        }
+        step_count++;
+    }
+    motor.StopRecording();
+
+    std::string filename = "step_response_"+std::to_string(int(voltage))+"V.csv";
+    motor.exportToCSV(filename);
+}
+
+
 void torque_sweep(MAXON_BLDC_MOTOR_SIMULATION& motor, double voltage, double Torque_Min, double Torque_Max, int num_data_points) {
     std::cout << "\nTorque sweep: " << voltage << "V\n";
     std::cout << "Torque range: " << Torque_Min << " to " << Torque_Max << " Nm\n";
@@ -306,14 +328,18 @@ int main() {
     YAML::Node motor_values = YAML::LoadFile("/workspaces/MotorDynamics/ECXFL42M_KL_A_HTQ_48V.yaml");
 
     //double dt = 0.05;
-
+    
     MAXON_BLDC_MOTOR_SIMULATION motor(motor_values); //(motor_values, dt)
-
+    
     motor.printMotorInfo();
     
     double Tmax_48V = motor.getKv() * 48.0 / motor.getdwdT();
     torque_sweep(motor, 48.0, 0.0, Tmax_48V, 50);
-    
+    double load_torque = 0.0;
+    double voltage = 48.0;
+    double duration = 10;
+    torque_step(motor, voltage, duration, load_torque);
+
 // motor voltage and end time simulation
     //std::cout << "Motor simulation: 48V - NO LOAD" << std::endl;
     // motor.resetNoIC();
